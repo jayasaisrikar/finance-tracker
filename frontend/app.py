@@ -260,7 +260,7 @@ def main():
         elif menu == "Add Transaction":
             st.header("Add Transaction")
             date = st.date_input("Date")
-            transaction_type = st.selectbox("Transaction Type", ["income", "expense"])
+            transaction_type = st.selectbox("Transaction Type", ["Income", "Expense"])
             amount = st.number_input("Amount", min_value=0.0)
             
             # Different categories based on transaction type
