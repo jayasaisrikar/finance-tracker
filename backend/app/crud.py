@@ -30,7 +30,6 @@ def get_transactions(db: Session, user_id: int, skip: int = 0, limit: int = 100)
 
 def create_user_transaction(db: Session, transaction: schemas.TransactionCreate, user_id: int):
     transaction_dict = transaction.dict()
-    # Ensure the amount is properly converted based on transaction type
     if transaction_dict['transaction_type'] == 'expense':
         transaction_dict['amount'] = -abs(transaction_dict['amount'])
     else:
@@ -45,7 +44,13 @@ def create_user_transaction(db: Session, transaction: schemas.TransactionCreate,
 def update_transaction(db: Session, transaction_id: int, transaction: schemas.TransactionCreate):
     db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
     if db_transaction:
-        for key, value in transaction.dict().items():
+        transaction_dict = transaction.dict()
+        if transaction_dict['transaction_type'] == 'expense':
+            transaction_dict['amount'] = -abs(transaction_dict['amount'])
+        else:
+            transaction_dict['amount'] = abs(transaction_dict['amount'])
+        
+        for key, value in transaction_dict.items():
             setattr(db_transaction, key, value)
         db.commit()
         db.refresh(db_transaction)
@@ -54,9 +59,11 @@ def update_transaction(db: Session, transaction_id: int, transaction: schemas.Tr
 def delete_transaction(db: Session, transaction_id: int):
     db_transaction = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
     if db_transaction:
+        deleted_transaction = db_transaction  # Store the transaction before deletion
         db.delete(db_transaction)
         db.commit()
-    return db_transaction
+        return deleted_transaction  # Return the deleted transaction
+    return None
 
 def get_transactions_by_date_range(db: Session, user_id: int, start_date: datetime, end_date: datetime):
     return db.query(models.Transaction).filter(
@@ -74,7 +81,18 @@ def get_transactions_by_category(db: Session, user_id: int, category: str):
 def get_transactions_by_amount_range(db: Session, user_id: int, min_amount: float, max_amount: float):
     return db.query(models.Transaction).filter(
         models.Transaction.user_id == user_id,
-        models.Transaction.amount >= min_amount,
-        models.Transaction.amount <= max_amount
+        (
+            # For income transactions (positive amounts)
+            ((models.Transaction.transaction_type == "income") & 
+             (models.Transaction.amount >= min_amount) & 
+             (models.Transaction.amount <= max_amount)) |
+            # For expense transactions (negative amounts)
+            ((models.Transaction.transaction_type == "expense") & 
+             (models.Transaction.amount <= -min_amount) & 
+             (models.Transaction.amount >= -max_amount))
+        )
     ).all()
+
+def get_transaction(db: Session, transaction_id: int):
+    return db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
 

@@ -12,6 +12,30 @@ API_URL = "https://finance-tracker-th8d.onrender.com"
 if 'access_token' not in st.session_state:
     st.session_state.access_token = None
 
+# Define categories for income and expenses
+INCOME_CATEGORIES = [
+    "Salary",
+    "Freelance",
+    "Investments",
+    "Rental Income",
+    "Business",
+    "Other Income"
+]
+
+EXPENSE_CATEGORIES = [
+    "Food",
+    "Transportation",
+    "Housing",
+    "Utilities",
+    "Healthcare",
+    "Entertainment",
+    "Shopping",
+    "Education",
+    "Insurance",
+    "Savings",
+    "Other Expenses"
+]
+
 def init_session():
     if 'access_token' in st.session_state:
         return st.session_state.access_token
@@ -28,41 +52,51 @@ def login(username, password):
     return False
 
 def signup(username, email, password):
-    print(f"Making request to: {API_URL}/users/")
-    response = requests.post(f"{API_URL}/users/", 
-                           json={"username": username, "email": email, "password": password})
-    print(f"Response status: {response.status_code}")
-    print(f"Response content: {response.text}")
-    
-    if response.status_code == 200:
-        #st.success("Account created successfully. Please log in.")
-        return True
-    elif response.status_code == 400:
-        error_detail = response.json().get("detail", "Unknown error")
-        st.error(f"Failed to create account: {error_detail}")
-    else:
-        st.error(f"Failed to create account. Status code: {response.status_code}")
-    return False
+    try:
+        response = requests.post(
+            f"{API_URL}/users/", 
+            json={"username": username, "email": email, "password": password}
+        )
+        
+        if response.status_code == 200:
+            return True
+        elif response.status_code == 422:  # Validation error
+            error_detail = response.json().get("detail", [{"msg": "Unknown error"}])[0]["msg"]
+            st.error(f"Failed to create account: {error_detail}")
+            return False
+        elif response.status_code == 400:
+            error_detail = response.json().get("detail", "Unknown error")
+            st.error(f"Failed to create account: {error_detail}")
+            return False
+        else:
+            st.error(f"Failed to create account. Status code: {response.status_code}")
+            return False
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        return False
 
-def get_transactions(min_amount=None, max_amount=None):
+def get_transaction(transaction_id):
     headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
-    params = {}
-    if min_amount is not None and max_amount is not None:
-        params = {"min_amount": min_amount, "max_amount": max_amount}
-    response = requests.get(f"{API_URL}/transactions/", headers=headers, params=params)
+    response = requests.get(f"{API_URL}/transactions/{transaction_id}", headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    return None
+
+def get_transactions():
+    headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
+    response = requests.get(f"{API_URL}/transactions/", headers=headers)
     if response.status_code == 200:
         return response.json()
     return []
 
 def add_transaction(date, amount, transaction_type, category, description):
-    # Validate amount before making the request
     if amount == 0:
         st.error("Transaction amount cannot be zero")
         return False
         
     headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
     data = {
-        "date": date,
+        "date": date.strftime("%Y-%m-%d"),
         "amount": amount,
         "transaction_type": transaction_type,
         "category": category,
@@ -75,6 +109,45 @@ def add_transaction(date, amount, transaction_type, category, description):
     else:
         error_detail = response.json().get("detail", "Failed to add transaction. Please try again.")
         st.error(error_detail)
+        return False
+
+def update_transaction(transaction_id, date, amount, transaction_type, category, description):
+    headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
+    data = {
+        "date": date,
+        "amount": amount,
+        "transaction_type": transaction_type,
+        "category": category,
+        "description": description
+    }
+    response = requests.put(f"{API_URL}/transactions/{transaction_id}", json=data, headers=headers)
+    if response.status_code == 200:
+        st.success("Transaction updated successfully.")
+        return True
+    else:
+        error_detail = response.json().get("detail", "Failed to update transaction. Please try again.")
+        st.error(error_detail)
+        return False
+
+def delete_transaction(transaction_id):
+    headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
+    try:
+        response = requests.delete(f"{API_URL}/transactions/{transaction_id}", headers=headers)
+        if response.status_code == 200:
+            st.success("Transaction deleted successfully.")
+            return True
+        elif response.status_code == 404:
+            st.error("Transaction not found.")
+            return False
+        elif response.status_code == 403:
+            st.error("Not authorized to delete this transaction.")
+            return False
+        else:
+            error_detail = response.json().get("detail", "Failed to delete transaction. Please try again.")
+            st.error(error_detail)
+            return False
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
         return False
 
 def get_summary():
@@ -268,19 +341,89 @@ def main():
 
         elif menu == "Add Transaction":
             st.header("Add Transaction")
-            date = st.date_input("Date")
-            transaction_type = st.selectbox("Transaction Type", ["income", "expense"])
-            amount = st.number_input("Amount in $", min_value=0.01, value=1.0, step=0.01)
-            
-            # Different categories based on transaction type
-            if transaction_type == "income":
-                category = st.selectbox("Category", ["Salary", "Investment", "Business", "Other Income"])
-            else:
-                category = st.selectbox("Category", ["Food", "Transportation", "Entertainment", "Bills", "Shopping", "Other Expense"])
-            
-            description = st.text_input("Description")
-            if st.button("Add Transaction"):
-                add_transaction(str(date), amount, transaction_type.lower(), category, description)
+            st.markdown("""
+                <style>
+                .stSelectbox, .stDateInput, .stNumberInput {
+                    margin-bottom: 1rem;
+                }
+                .transaction-form {
+                    background-color: #f8f9fa;
+                    padding: 0px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                </style>
+            """, unsafe_allow_html=True)
+
+            with st.container():
+                st.markdown('<div class="transaction-form">', unsafe_allow_html=True)
+                
+                # Transaction type selector with custom styling
+                transaction_type = st.selectbox(
+                    "Transaction Type",
+                    ["income", "expense"],
+                    key="trans_type_select",
+                    format_func=lambda x: x.capitalize()
+                )
+
+                with st.form(key=f"transaction_form_{transaction_type}", clear_on_submit=True):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        date = st.date_input(
+                            "Date",
+                            help="Select the date of the transaction"
+                        )
+                        amount = st.number_input(
+                            "Amount ($)",
+                            min_value=0.01,
+                            step=0.01,
+                            help="Enter the transaction amount"
+                        )
+                    
+                    with col2:
+                        categories = INCOME_CATEGORIES if transaction_type == "income" else EXPENSE_CATEGORIES
+                        category = st.selectbox(
+                            "Category",
+                            options=categories,
+                            key=f"category_{transaction_type}",
+                            help="Select the transaction category"
+                        )
+                        description = st.text_input(
+                            "Description",
+                            placeholder="Enter transaction description",
+                            help="Add a brief description of the transaction"
+                        )
+                    
+                    # Centered submit button with styling
+                    col1, col2, col3 = st.columns([1, 2, 1])
+                    with col2:
+                        submitted = st.form_submit_button(
+                            "Add Transaction",
+                            use_container_width=True,
+                            type="primary"
+                        )
+                    
+                    if submitted:
+                        add_transaction(date, amount, transaction_type, category, description)
+                
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            st.subheader("Existing Transactions")
+            transactions = get_transactions()
+            if transactions:
+                df = pd.DataFrame(transactions)
+                df['date'] = pd.to_datetime(df['date'])
+                df = df.sort_values('date', ascending=False)
+                st.dataframe(df[['date', 'amount', 'transaction_type', 'category', 'description']])
+
+                # Create a dropdown with transaction descriptions or categories
+                transaction_options = df.apply(lambda row: f"{row['description']} ({row['category']}) - ID: {row['id']}", axis=1).tolist()
+                selected_transaction_index = st.selectbox("Select Transaction to Delete", range(len(transaction_options)), format_func=lambda x: transaction_options[x])
+
+                if st.button("Delete Transaction"):
+                    selected_transaction_id = df.iloc[selected_transaction_index]['id']
+                    delete_transaction(selected_transaction_id)
 
         elif menu == "Transaction List":
             st.header("Transaction List")

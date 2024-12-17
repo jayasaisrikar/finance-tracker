@@ -161,5 +161,5 @@ def test_get_transactions_by_amount_range():
     
     assert response.status_code == 200
     filtered_transactions = response.json()
-    assert len(filtered_transactions) == 2  # Should only get transactions with amounts between 40 and 120
+    assert len(filtered_transactions) == 2 
 

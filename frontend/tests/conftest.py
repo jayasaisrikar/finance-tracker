@@ -12,11 +12,7 @@ class MockSessionState(dict):
 def mock_streamlit():
     # Create a mock session state
     session_state = MockSessionState(access_token=None)
-    
-    # Mock streamlit module
     st.session_state = session_state
-    
-    # Mock other commonly used streamlit functions
     st.error = MagicMock()
     st.success = MagicMock()
     st.info = MagicMock()

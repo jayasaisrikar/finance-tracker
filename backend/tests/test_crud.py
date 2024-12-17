@@ -131,5 +131,5 @@ def test_get_transactions_by_amount_range(db: Session):
         crud.create_user_transaction(db, transaction, db_user.id)
     
     filtered_transactions = crud.get_transactions_by_amount_range(db, db_user.id, 75.0, 175.0)
-    assert len(filtered_transactions) == 2  # Should only get transactions with amounts between 75 and 175
+    assert len(filtered_transactions) == 2 
 

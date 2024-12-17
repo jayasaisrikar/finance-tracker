@@ -47,8 +47,12 @@ def test_add_transaction_success(requests_mock):
         status_code=200
     )
     
+    # Convert string date to datetime object
+    from datetime import datetime
+    test_date = datetime.strptime("2024-03-20", "%Y-%m-%d").date()
+    
     result = add_transaction(
-        "2024-03-20",
+        test_date,
         50.0,
         "expense",
         "Food",
