@@ -35,7 +35,7 @@ def signup(username, email, password):
     print(f"Response content: {response.text}")
     
     if response.status_code == 200:
-        st.success("Account created successfully. Please log in.")
+        #st.success("Account created successfully. Please log in.")
         return True
     elif response.status_code == 400:
         error_detail = response.json().get("detail", "Unknown error")
