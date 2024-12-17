@@ -105,14 +105,18 @@ def main():
             new_password = st.text_input("New Password", type="password", key="signup_password")
             if st.button("Sign Up"):
                 if new_username and new_email and new_password:
-                    if signup(new_username, new_email, new_password):
-                        st.success("Account created successfully. Please log in.")
+                    # Email validation
+                    if "@" not in new_email or "." not in new_email:
+                        st.error("Please enter a valid email address (must contain '@' and '.')")
+                    else:
+                        if signup(new_username, new_email, new_password):
+                            st.success("Account created successfully. Please log in.")
                 else:
                     st.error("Please fill in all fields.")
 
     else:
         st.sidebar.title("Menu")
-        menu = st.sidebar.selectbox(
+        menu = st.sidebar.radio(
             "Navigation",
             ["Dashboard", "Analysis", "Add Transaction", "Transaction List"]
         )

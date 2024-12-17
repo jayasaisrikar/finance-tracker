@@ -52,3 +52,7 @@ def test_failed_signup_duplicate_user(requests_mock):
     
     result = signup("existinguser", "test@example.com", "password123")
     assert result == False
+
+def test_signup_invalid_email():
+    result = signup("testuser", "invalidemail", "password123")
+    assert result == False
