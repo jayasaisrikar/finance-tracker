@@ -156,6 +156,13 @@ def main():
                     monthly_df = df.copy()
                     monthly_df['month'] = monthly_df['date'].dt.strftime('%Y-%m')
                     monthly_summary = monthly_df.groupby(['month', 'transaction_type'])['amount'].sum().unstack().fillna(0)
+
+                    # Check if both income and expense columns exist
+                    if 'income' not in monthly_summary.columns:
+                        monthly_summary['income'] = 0
+                    if 'expense' not in monthly_summary.columns:
+                        monthly_summary['expense'] = 0
+
                     monthly_summary['net'] = monthly_summary['income'] - abs(monthly_summary['expense'])
 
                     fig = go.Figure()
@@ -188,6 +195,9 @@ def main():
                         xaxis_title='Month'
                     )
                     st.plotly_chart(fig, use_container_width=True)
+
+                    if monthly_summary['expense'].sum() == 0:
+                        st.info("No expenses recorded yet. Add some expense transactions to see the complete analysis.")
 
                 with col2:
                     # Daily Transactions
