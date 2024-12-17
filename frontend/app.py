@@ -405,7 +405,7 @@ def main():
                 df = df.sort_values('date', ascending=False)
                 st.dataframe(df[['date', 'amount', 'transaction_type', 'category', 'description']])
 
-                transaction_options = df.apply(lambda row: f"{row['description']} ({row['category']}) - ID: {row['id']}", axis=1).tolist()
+                transaction_options = df.apply(lambda row: f"{row['description']} ({row['category']}) - ID: {row['id']-1}", axis=1).tolist()
                 selected_transaction_index = st.selectbox("Select Transaction to Delete", range(len(transaction_options)), format_func=lambda x: transaction_options[x])
 
                 if st.button("Delete Transaction"):
