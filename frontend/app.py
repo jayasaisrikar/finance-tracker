@@ -130,7 +130,7 @@ def main():
                 <style>
                 .metric-container {
                     background-color: #f0f2f6;
-                    padding: 20px;
+                    padding: 0px;
                     border-radius: 10px;
                     margin-bottom: 20px;
                 }
