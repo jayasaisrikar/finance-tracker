@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 # Backend API URL
-API_URL = "http://localhost:8000"
+API_URL = "https://finance-tracker-th8d.onrender.com"
 
 # Session state
 if 'access_token' not in st.session_state:
@@ -94,7 +94,7 @@ def main():
             if st.button("Login"):
                 if login(username, password):
                     st.success("Logged in successfully!")
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("Invalid username or password")
 
@@ -408,7 +408,7 @@ def main():
 
         if st.sidebar.button("Logout"):
             st.session_state.access_token = None
-            st.experimental_rerun()
+            st.rerun()
 
 if __name__ == "__main__":
     main()
