@@ -94,7 +94,7 @@ def main():
             if st.button("Login"):
                 if login(username, password):
                     st.success("Logged in successfully!")
-                    st.rerun()
+                    st.experimental_rerun()
                 else:
                     st.error("Invalid username or password")
 
@@ -412,7 +412,7 @@ def main():
 
         if st.sidebar.button("Logout"):
             st.session_state.access_token = None
-            st.rerun()
+            st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
