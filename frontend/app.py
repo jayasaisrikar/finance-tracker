@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 # Backend API URL
-API_URL = "http://localhost:8000"
+API_URL = "https://finance-tracker-th8d.onrender.com"
 
 # Session state
 if 'access_token' not in st.session_state:
