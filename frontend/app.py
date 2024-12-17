@@ -160,8 +160,6 @@ def get_summary():
 def main():
     st.set_page_config(page_title="Personal Finance Tracker", layout="wide")
     st.title("Personal Finance Tracker")
-    
-    # Initialize session
     token = init_session()
     if token:
         st.session_state.access_token = token
@@ -187,7 +185,6 @@ def main():
             new_password = st.text_input("New Password", type="password", key="signup_password")
             if st.button("Sign Up"):
                 if new_username and new_email and new_password:
-                    # Email validation
                     if "@" not in new_email or "." not in new_email:
                         st.error("Please enter a valid email address (must contain '@' and '.')")
                     else:
@@ -206,8 +203,6 @@ def main():
         if menu == "Dashboard":
             st.header("Dashboard")
             summary = get_summary()
-            
-            # Summary metrics in a nice box with custom CSS
             st.markdown("""
                 <style>
                 .metric-container {
@@ -232,18 +227,14 @@ def main():
             if transactions:
                 df = pd.DataFrame(transactions)
                 df['date'] = pd.to_datetime(df['date'])
-                
-                # Create two columns for the charts
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    # Monthly Overview
                     st.subheader("Monthly Overview")
                     monthly_df = df.copy()
                     monthly_df['month'] = monthly_df['date'].dt.strftime('%Y-%m')
                     monthly_summary = monthly_df.groupby(['month', 'transaction_type'])['amount'].sum().unstack().fillna(0)
 
-                    # Check if both income and expense columns exist
                     if 'income' not in monthly_summary.columns:
                         monthly_summary['income'] = 0
                     if 'expense' not in monthly_summary.columns:
@@ -329,7 +320,6 @@ def main():
                     else:
                         st.info("No income data available")
 
-                # Recent Transactions Table
                 st.subheader("Recent Transactions")
                 recent_transactions = df.sort_values('date', ascending=False).head(5)
                 st.dataframe(
@@ -358,7 +348,6 @@ def main():
             with st.container():
                 st.markdown('<div class="transaction-form">', unsafe_allow_html=True)
                 
-                # Transaction type selector with custom styling
                 transaction_type = st.selectbox(
                     "Transaction Type",
                     ["income", "expense"],
@@ -395,7 +384,6 @@ def main():
                             help="Add a brief description of the transaction"
                         )
                     
-                    # Centered submit button with styling
                     col1, col2, col3 = st.columns([1, 2, 1])
                     with col2:
                         submitted = st.form_submit_button(
@@ -417,7 +405,6 @@ def main():
                 df = df.sort_values('date', ascending=False)
                 st.dataframe(df[['date', 'amount', 'transaction_type', 'category', 'description']])
 
-                # Create a dropdown with transaction descriptions or categories
                 transaction_options = df.apply(lambda row: f"{row['description']} ({row['category']}) - ID: {row['id']}", axis=1).tolist()
                 selected_transaction_index = st.selectbox("Select Transaction to Delete", range(len(transaction_options)), format_func=lambda x: transaction_options[x])
 
@@ -433,7 +420,6 @@ def main():
                 df['date'] = pd.to_datetime(df['date'])
                 df = df.sort_values('date', ascending=False)
 
-                # Filters
                 st.subheader("Filters")
                 col1, col2, col3, col4, col5 = st.columns(5)
                 with col1:
@@ -463,14 +449,12 @@ def main():
                 df = pd.DataFrame(transactions)
                 df['date'] = pd.to_datetime(df['date'])
                 
-                # Financial Health Analysis
                 total_income = abs(sum(t['amount'] for t in transactions if t['transaction_type'] == 'income'))
                 total_expenses = abs(sum(t['amount'] for t in transactions if t['transaction_type'] == 'expense'))
                 
                 if total_income > 0:
                     expense_ratio = (total_expenses / total_income) * 100
                     
-                    # Create three columns for better layout
                     col1, col2, col3 = st.columns([2, 1, 2])
                     
                     with col1:

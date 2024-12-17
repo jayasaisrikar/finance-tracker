@@ -133,3 +133,44 @@ def test_get_transactions_by_amount_range(db: Session):
     filtered_transactions = crud.get_transactions_by_amount_range(db, db_user.id, 75.0, 175.0)
     assert len(filtered_transactions) == 2 
 
+def test_password_validation(db: Session):
+    # Test too short password
+    with pytest.raises(ValueError, match="Password must be at least 8 characters long"):
+        user = schemas.UserCreate(
+            email="test@example.com",
+            username="testuser",
+            password="Abc1!"
+        )
+    
+    # Test no uppercase
+    with pytest.raises(ValueError, match="Password must contain at least one uppercase letter"):
+        user = schemas.UserCreate(
+            email="test@example.com",
+            username="testuser",
+            password="password1!"
+        )
+    
+    # Test no number
+    with pytest.raises(ValueError, match="Password must contain at least one number"):
+        user = schemas.UserCreate(
+            email="test@example.com",
+            username="testuser",
+            password="Password!"
+        )
+    
+    # Test no special character
+    with pytest.raises(ValueError, match="Password must contain at least one special character"):
+        user = schemas.UserCreate(
+            email="test@example.com",
+            username="testuser",
+            password="Password1"
+        )
+    
+    # Test valid password
+    user = schemas.UserCreate(
+        email="test@example.com",
+        username="testuser",
+        password="Password1!"
+    )
+    assert user.password == "Password1!"
+
