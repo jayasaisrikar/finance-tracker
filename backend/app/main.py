@@ -114,3 +114,18 @@ def get_transaction_summary(
         "net_balance": net_balance
     }
 
+@app.get("/transactions/by-amount/")
+def get_transactions_by_amount(
+    min_amount: float,
+    max_amount: float,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(auth.get_current_user)
+):
+    transactions = crud.get_transactions_by_amount_range(
+        db, 
+        user_id=current_user.id, 
+        min_amount=min_amount, 
+        max_amount=max_amount
+    )
+    return transactions
+

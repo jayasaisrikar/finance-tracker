@@ -115,3 +115,21 @@ def test_update_nonexistent_transaction(db: Session):
     result = crud.update_transaction(db, 999, transaction)
     assert result is None
 
+def test_get_transactions_by_amount_range(db: Session):
+    user = schemas.UserCreate(email="test@example.com", password="testpass", username="testuser")
+    db_user = crud.create_user(db, user)
+    
+    amounts = [50.0, 100.0, 150.0, 200.0]
+    for amount in amounts:
+        transaction = schemas.TransactionCreate(
+            date=date.today(),
+            amount=amount,
+            transaction_type="expense",
+            category="Test",
+            description="Test"
+        )
+        crud.create_user_transaction(db, transaction, db_user.id)
+    
+    filtered_transactions = crud.get_transactions_by_amount_range(db, db_user.id, 75.0, 175.0)
+    assert len(filtered_transactions) == 2  # Should only get transactions with amounts between 75 and 175
+

@@ -1,0 +1,6 @@
+
+**/*.db
+**/__pycache__/
+**/venv/
+**/backend/app/finance_tracker.db
+**/backend/tests/test.db 

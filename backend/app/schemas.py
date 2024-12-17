@@ -23,10 +23,15 @@ class TransactionBase(BaseModel):
     description: str
 
     @validator('amount')
-    def adjust_amount_based_on_type(cls, v, values):
+    def validate_and_adjust_amount(cls, v, values):
+        # Check for zero amount
+        if v == 0:
+            raise ValueError("Transaction amount cannot be zero")
+            
+        # Adjust amount based on transaction type
         if 'transaction_type' in values and values['transaction_type'] == 'expense':
-            return -abs(float(v))  # Make sure expense is negative and convert to float
-        return abs(float(v))  # Make sure income is positive and convert to float
+            return -abs(float(v))  # Make sure expense is negative
+        return abs(float(v))  # Make sure income is positive
 
 class TransactionCreate(TransactionBase):
     pass

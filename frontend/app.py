@@ -44,14 +44,22 @@ def signup(username, email, password):
         st.error(f"Failed to create account. Status code: {response.status_code}")
     return False
 
-def get_transactions():
+def get_transactions(min_amount=None, max_amount=None):
     headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
-    response = requests.get(f"{API_URL}/transactions/", headers=headers)
+    params = {}
+    if min_amount is not None and max_amount is not None:
+        params = {"min_amount": min_amount, "max_amount": max_amount}
+    response = requests.get(f"{API_URL}/transactions/", headers=headers, params=params)
     if response.status_code == 200:
         return response.json()
     return []
 
 def add_transaction(date, amount, transaction_type, category, description):
+    # Validate amount before making the request
+    if amount == 0:
+        st.error("Transaction amount cannot be zero")
+        return False
+        
     headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
     data = {
         "date": date,
@@ -65,7 +73,8 @@ def add_transaction(date, amount, transaction_type, category, description):
         st.success("Transaction added successfully.")
         return True
     else:
-        st.error("Failed to add transaction. Please try again.")
+        error_detail = response.json().get("detail", "Failed to add transaction. Please try again.")
+        st.error(error_detail)
         return False
 
 def get_summary():
@@ -261,7 +270,7 @@ def main():
             st.header("Add Transaction")
             date = st.date_input("Date")
             transaction_type = st.selectbox("Transaction Type", ["income", "expense"])
-            amount = st.number_input("Amount in $", min_value=0.0)
+            amount = st.number_input("Amount in $", min_value=0.01, value=1.0, step=0.01)
             
             # Different categories based on transaction type
             if transaction_type == "income":
@@ -283,17 +292,22 @@ def main():
 
                 # Filters
                 st.subheader("Filters")
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4, col5 = st.columns(5)
                 with col1:
                     start_date = st.date_input("Start Date", df['date'].min())
                 with col2:
                     end_date = st.date_input("End Date", df['date'].max())
                 with col3:
                     category_filter = st.multiselect("Category", df['category'].unique())
+                with col4:
+                    min_amount = st.number_input("Min Amount", value=float(df['amount'].min()))
+                with col5:
+                    max_amount = st.number_input("Max Amount", value=float(df['amount'].max()))
 
                 filtered_df = df[(df['date'] >= pd.Timestamp(start_date)) & (df['date'] <= pd.Timestamp(end_date))]
                 if category_filter:
                     filtered_df = filtered_df[filtered_df['category'].isin(category_filter)]
+                filtered_df = filtered_df[(filtered_df['amount'] >= min_amount) & (filtered_df['amount'] <= max_amount)]
 
                 st.dataframe(filtered_df[['date', 'amount', 'category', 'description']])
             else:
