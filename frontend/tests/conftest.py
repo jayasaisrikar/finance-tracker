@@ -20,6 +20,6 @@ def mock_streamlit():
     st.error = MagicMock()
     st.success = MagicMock()
     st.info = MagicMock()
-    st.experimental_rerun = MagicMock()
+    st.rerun = MagicMock()
     
     return st
