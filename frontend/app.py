@@ -63,8 +63,10 @@ def add_transaction(date, amount, transaction_type, category, description):
     response = requests.post(f"{API_URL}/transactions/", json=data, headers=headers)
     if response.status_code == 200:
         st.success("Transaction added successfully.")
+        return True
     else:
         st.error("Failed to add transaction. Please try again.")
+        return False
 
 def get_summary():
     headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
