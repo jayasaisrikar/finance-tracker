@@ -340,7 +340,7 @@ def main():
                 st.info("No transactions found. Add some transactions to see your financial analysis.")
 
         elif menu == "Add Transaction":
-            st.header("Add Transaction")
+            st.header("Transaction Management")
             st.markdown("""
                 <style>
                 .stSelectbox, .stDateInput, .stNumberInput {
