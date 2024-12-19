@@ -11,3 +11,5 @@ sqlalchemy_utils
 email-validator
 pytest
 requests
+psycopg2-binary
+python-dotenv
