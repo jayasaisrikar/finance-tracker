@@ -84,11 +84,10 @@ def get_transaction(transaction_id):
 
 def get_transactions():
     headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
-    with st.spinner('Loading transactions...'):
-        response = requests.get(f"{API_URL}/transactions/", headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        return []
+    response = requests.get(f"{API_URL}/transactions/", headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    return []
 
 def add_transaction(date, amount, transaction_type, category, description):
     if amount == 0:
@@ -123,7 +122,7 @@ def update_transaction(transaction_id, date, amount, transaction_type, category,
     }
     response = requests.put(f"{API_URL}/transactions/{transaction_id}", json=data, headers=headers)
     if response.status_code == 200:
-        #st.success("Transaction updated successfully.")
+        st.success("Transaction updated successfully.")
         return True
     else:
         error_detail = response.json().get("detail", "Failed to update transaction. Please try again.")
@@ -157,71 +156,6 @@ def get_summary():
     if response.status_code == 200:
         return response.json()
     return {"total_income": 0, "total_expenses": 0, "net_balance": 0}
-
-def update_transaction_ui(transaction_id, date, amount, transaction_type, category, description):
-    st.subheader("Edit Transaction")
-    
-    # Create form for editing
-    with st.form(key=f"edit_transaction_form_{transaction_id}"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            new_date = st.date_input(
-                "Date",
-                value=pd.to_datetime(date).date(),
-                help="Select the date of the transaction"
-            )
-            new_amount = st.number_input(
-                "Amount ($)",
-                value=abs(float(amount)),
-                min_value=0.01,
-                step=0.01,
-                help="Enter the transaction amount"
-            )
-        
-        with col2:
-            new_type = st.selectbox(
-                "Transaction Type",
-                ["income", "expense"],
-                index=0 if transaction_type == "income" else 1,
-                help="Select the transaction type"
-            )
-            categories = INCOME_CATEGORIES if new_type == "income" else EXPENSE_CATEGORIES
-            new_category = st.selectbox(
-                "Category",
-                options=categories,
-                index=categories.index(category) if category in categories else 0,
-                help="Select the transaction category"
-            )
-            new_description = st.text_input(
-                "Description",
-                value=description,
-                help="Add a brief description of the transaction"
-            )
-
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            submitted = st.form_submit_button(
-                "Update Transaction",
-                use_container_width=True,
-                type="primary"
-            )
-        
-        if submitted:
-            success = update_transaction(
-                transaction_id,
-                new_date.strftime("%Y-%m-%d"),
-                new_amount,
-                new_type,
-                new_category,
-                new_description
-            )
-            if success:
-                st.success("Transaction updated successfully!")
-                time.sleep(1)  # Give user time to see the success message
-                st.rerun()
-            else:
-                st.error("Failed to update transaction. Please try again.")
 
 def main():
     st.set_page_config(page_title="Personal Finance Tracker", layout="wide")
@@ -267,146 +201,131 @@ def main():
         )
 
         if menu == "Dashboard":
-            col1, col2 = st.columns([0.65, 0.35])
-            with col1:
-                st.header("Dashboard")
+            st.header("Dashboard")
+            summary = get_summary()
+            st.markdown("""
+                <style>
+                .metric-container {
+                    background-color: #f0f2f6;
+                    padding: 0px;
+                    border-radius: 10px;
+                    margin-bottom: 20px;
+                }
+                </style>
+            """, unsafe_allow_html=True)
             
-            # Add month selector
+            with st.container():
+                st.markdown('<div class="metric-container">', unsafe_allow_html=True)
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Total Income", f"${summary['total_income']:.2f}", delta=None)
+                col2.metric("Total Expenses", f"${summary['total_expenses']:.2f}", delta=None)
+                col3.metric("Net Balance", f"${summary['net_balance']:.2f}", 
+                           delta=summary['net_balance'] - summary['total_expenses'])
+                st.markdown('</div>', unsafe_allow_html=True)
+
             transactions = get_transactions()
             if transactions:
                 df = pd.DataFrame(transactions)
                 df['date'] = pd.to_datetime(df['date'])
-                df['month'] = df['date'].dt.strftime('%Y-%m')
-                available_months = sorted(df['month'].unique(), reverse=True)
-                current_month = datetime.now().strftime('%Y-%m')
-                
-                with col2:
-                    st.markdown("""
-                        <style>
-                        div[data-testid="stSelectbox"] {
-                            margin-top: 15px;
-                        }
-                        </style>
-                    """, unsafe_allow_html=True)
-                    selected_month = st.selectbox(
-                        "📅 Select Month",
-                        options=available_months,
-                        index=available_months.index(current_month) if current_month in available_months else 0,
-                        key="dashboard_month_selector"
-                    )
-                
-                # Filter transactions for selected month
-                monthly_df = df[df['month'] == selected_month]
-                
-                # Calculate monthly summary
-                monthly_income = abs(monthly_df[monthly_df['transaction_type'] == 'income']['amount'].sum())
-                monthly_expenses = abs(monthly_df[monthly_df['transaction_type'] == 'expense']['amount'].sum())
-                monthly_balance = monthly_income - monthly_expenses
-                
-                st.markdown("""
-                    <style>
-                    .metric-container {
-                        background-color: #f0f2f6;
-                        padding: 0px;
-                        border-radius: 10px;
-                        margin-bottom: 20px;
-                    }
-                    </style>
-                """, unsafe_allow_html=True)
-                
-                with st.container():
-                    st.markdown('<div class="metric-container">', unsafe_allow_html=True)
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric("Monthly Income", f"${monthly_income:.2f}", delta=None)
-                    col2.metric("Monthly Expenses", f"${monthly_expenses:.2f}", delta=None)
-                    col3.metric("Monthly Balance", f"${monthly_balance:.2f}", 
-                               delta=monthly_balance - monthly_expenses)
-                    st.markdown('</div>', unsafe_allow_html=True)
-
-                # Add Monthly Overview plot
-                st.subheader("Monthly Overview")
-                monthly_summary = df.groupby(['month', 'transaction_type'])['amount'].sum().unstack().fillna(0)
-
-                if 'income' not in monthly_summary.columns:
-                    monthly_summary['income'] = 0
-                if 'expense' not in monthly_summary.columns:
-                    monthly_summary['expense'] = 0
-
-                monthly_summary['net'] = monthly_summary['income'] - abs(monthly_summary['expense'])
-
-                fig = go.Figure()
-                fig.add_trace(go.Bar(
-                    x=monthly_summary.index,
-                    y=monthly_summary['income'],
-                    name='Income',
-                    marker_color='lightgreen'
-                ))
-                fig.add_trace(go.Bar(
-                    x=monthly_summary.index,
-                    y=-monthly_summary['expense'],
-                    name='Expenses',
-                    marker_color='lightblue'
-                ))
-                fig.add_trace(go.Scatter(
-                    x=monthly_summary.index,
-                    y=monthly_summary['net'],
-                    name='Net',
-                    line=dict(color='blue', width=2),
-                    mode='lines+markers'
-                ))
-
-                fig.update_layout(
-                    title='Monthly Financial Overview',
-                    barmode='relative',
-                    height=400,
-                    hovermode='x unified',
-                    yaxis_title='Amount ($)',
-                    xaxis_title='Month'
-                )
-                st.plotly_chart(fig, use_container_width=True)
-
-                if monthly_summary['expense'].sum() == 0:
-                    st.info("No expenses recorded yet. Add some expense transactions to see the complete analysis.")
-
                 col1, col2 = st.columns(2)
                 
                 with col1:
+                    st.subheader("Monthly Overview")
+                    monthly_df = df.copy()
+                    monthly_df['month'] = monthly_df['date'].dt.strftime('%Y-%m')
+                    monthly_summary = monthly_df.groupby(['month', 'transaction_type'])['amount'].sum().unstack().fillna(0)
+
+                    if 'income' not in monthly_summary.columns:
+                        monthly_summary['income'] = 0
+                    if 'expense' not in monthly_summary.columns:
+                        monthly_summary['expense'] = 0
+
+                    monthly_summary['net'] = monthly_summary['income'] - abs(monthly_summary['expense'])
+
+                    fig = go.Figure()
+                    fig.add_trace(go.Bar(
+                        x=monthly_summary.index,
+                        y=monthly_summary['income'],
+                        name='Income',
+                        marker_color='lightgreen'
+                    ))
+                    fig.add_trace(go.Bar(
+                        x=monthly_summary.index,
+                        y=-monthly_summary['expense'],
+                        name='Expenses',
+                        marker_color='lightblue'
+                    ))
+                    fig.add_trace(go.Scatter(
+                        x=monthly_summary.index,
+                        y=monthly_summary['net'],
+                        name='Net',
+                        line=dict(color='blue', width=2),
+                        mode='lines+markers'
+                    ))
+
+                    fig.update_layout(
+                        title='Monthly Financial Overview',
+                        barmode='relative',
+                        height=400,
+                        hovermode='x unified',
+                        yaxis_title='Amount ($)',
+                        xaxis_title='Month'
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    if monthly_summary['expense'].sum() == 0:
+                        st.info("No expenses recorded yet. Add some expense transactions to see the complete analysis.")
+
+                with col2:
+                    # Daily Transactions
                     st.subheader("Daily Transactions")
-                    daily_summary = monthly_df.groupby(['date', 'transaction_type'])['amount'].sum().reset_index()
+                    daily_summary = df.groupby(['date', 'transaction_type'])['amount'].sum().reset_index()
                     fig = px.scatter(daily_summary, 
                                    x='date', 
                                    y='amount',
                                    color='transaction_type',
                                    size='amount',
-                                   title=f'Daily Transactions for {selected_month}',
+                                   title='Daily Transaction Overview',
                                    labels={'date': 'Date', 'amount': 'Amount ($)', 'transaction_type': 'Type'})
                     fig.update_layout(height=400)
                     st.plotly_chart(fig, use_container_width=True)
+
+                # Category Analysis in two columns
+                st.subheader("Category Analysis")
+                col1, col2 = st.columns(2)
                 
-                with col2:
-                    # Category Analysis for the selected month
-                    expense_df = monthly_df[monthly_df['transaction_type'] == 'expense']
+                with col1:
+                    expense_df = df[df['transaction_type'] == 'expense']
                     if not expense_df.empty:
                         expense_by_category = expense_df.groupby('category')['amount'].sum().abs()
                         fig = px.pie(values=expense_by_category.values, 
                                    names=expense_by_category.index, 
-                                   title=f'Expenses by Category for {selected_month}',
+                                   title='Expenses by Category',
                                    hole=0.4)
                         fig.update_layout(height=400)
                         st.plotly_chart(fig, use_container_width=True)
                     else:
-                        st.info("No expenses recorded for this month")
+                        st.info("No expense data available")
+                
+                with col2:
+                    income_df = df[df['transaction_type'] == 'income']
+                    if not income_df.empty:
+                        income_by_category = income_df.groupby('category')['amount'].sum()
+                        fig = px.pie(values=income_by_category.values, 
+                                   names=income_by_category.index, 
+                                   title='Income by Category',
+                                   hole=0.4)
+                        fig.update_layout(height=400)
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.info("No income data available")
 
-                # Recent Transactions for the selected month
-                st.subheader(f"Recent Transactions for {selected_month}")
-                recent_transactions = monthly_df.sort_values('date', ascending=False)
-                if not recent_transactions.empty:
-                    st.dataframe(
-                        recent_transactions[['date', 'transaction_type', 'amount', 'category', 'description']],
-                        use_container_width=True
-                    )
-                else:
-                    st.info("No transactions found for this month")
+                st.subheader("Recent Transactions")
+                recent_transactions = df.sort_values('date', ascending=False).head(5)
+                st.dataframe(
+                    recent_transactions[['date', 'transaction_type', 'amount', 'category', 'description']],
+                    use_container_width=True
+                )
             else:
                 st.info("No transactions found. Add some transactions to see your financial analysis.")
 
@@ -520,29 +439,6 @@ def main():
                 filtered_df = filtered_df[(filtered_df['amount'] >= min_amount) & (filtered_df['amount'] <= max_amount)]
 
                 st.dataframe(filtered_df[['date', 'amount', 'category', 'description']])
-
-                if not filtered_df.empty:
-                    st.subheader("Edit Transaction")
-                    transaction_options = filtered_df.apply(
-                        lambda row: f"{row['date'].strftime('%Y-%m-%d')} - {row['description']} ({row['category']}) - ${abs(row['amount'])}", 
-                        axis=1
-                    ).tolist()
-                    
-                    selected_transaction_index = st.selectbox(
-                        "Select Transaction to Edit",
-                        range(len(transaction_options)),
-                        format_func=lambda x: transaction_options[x]
-                    )
-                    
-                    selected_transaction = filtered_df.iloc[selected_transaction_index]
-                    update_transaction_ui(
-                        selected_transaction['id'],
-                        selected_transaction['date'],
-                        selected_transaction['amount'],
-                        selected_transaction['transaction_type'],
-                        selected_transaction['category'],
-                        selected_transaction['description']
-                    )
             else:
                 st.info("No transactions found. Add some transactions to see them here.")
 
@@ -552,30 +448,17 @@ def main():
             if transactions:
                 df = pd.DataFrame(transactions)
                 df['date'] = pd.to_datetime(df['date'])
-                df['month'] = df['date'].dt.strftime('%Y-%m')
-                available_months = sorted(df['month'].unique(), reverse=True)
-                current_month = datetime.now().strftime('%Y-%m')
                 
-                selected_month = st.selectbox(
-                    "Select Month",
-                    options=available_months,
-                    index=available_months.index(current_month) if current_month in available_months else 0
-                )
+                total_income = abs(sum(t['amount'] for t in transactions if t['transaction_type'] == 'income'))
+                total_expenses = abs(sum(t['amount'] for t in transactions if t['transaction_type'] == 'expense'))
                 
-                # Filter transactions for selected month
-                monthly_df = df[df['month'] == selected_month]
-                
-                # Calculate monthly totals
-                monthly_income = abs(monthly_df[monthly_df['transaction_type'] == 'income']['amount'].sum())
-                monthly_expenses = abs(monthly_df[monthly_df['transaction_type'] == 'expense']['amount'].sum())
-                
-                if monthly_income > 0:
-                    expense_ratio = (monthly_expenses / monthly_income) * 100
+                if total_income > 0:
+                    expense_ratio = (total_expenses / total_income) * 100
                     
                     col1, col2, col3 = st.columns([2, 1, 2])
                     
                     with col1:
-                        st.subheader(f"Expense Ratio for {selected_month}")
+                        st.subheader("Expense Ratio")
                         # Expense Ratio Gauge Chart
                         fig = go.Figure(go.Indicator(
                             mode="gauge+number+delta",
@@ -602,7 +485,7 @@ def main():
                         st.plotly_chart(fig, use_container_width=True)
 
                     with col3:
-                        st.subheader(f"Financial Status for {selected_month}")
+                        st.subheader("Financial Status")
                         if expense_ratio <= 50:
                             st.success("🌟 Excellent Financial Health!")
                             st.markdown("""
@@ -630,42 +513,41 @@ def main():
                             """)
 
                     # Spending Analysis
-                    st.subheader(f"Spending Analysis for {selected_month}")
+                    st.subheader("Spending Analysis")
                     col1, col2 = st.columns(2)
                     
                     with col1:
                         # Category-wise Expenses Bar Chart
-                        expense_df = monthly_df[monthly_df['transaction_type'] == 'expense']
+                        expense_df = df[df['transaction_type'] == 'expense']
                         if not expense_df.empty:
                             expense_by_category = expense_df.groupby('category')['amount'].sum().abs().sort_values(ascending=True)
                             fig = px.bar(
                                 x=expense_by_category.values,
                                 y=expense_by_category.index,
                                 orientation='h',
-                                title=f'Expenses by Category for {selected_month}',
+                                title='Expenses by Category',
                                 labels={'x': 'Amount ($)', 'y': 'Category'}
                             )
                             fig.update_layout(height=400)
                             st.plotly_chart(fig, use_container_width=True)
-                        else:
-                            st.info("No expenses recorded for this month")
                     
                     with col2:
-                        # Monthly Spending Pattern
-                        if not monthly_df[monthly_df['transaction_type'] == 'expense'].empty:
-                            daily_spending = monthly_df[monthly_df['transaction_type'] == 'expense'].groupby(['date', 'category'])['amount'].sum().abs()
-                            fig = px.sunburst(
-                                daily_spending.reset_index(),
-                                path=['category', 'date'],
-                                values='amount',
-                                title=f'Daily Spending Pattern for {selected_month}',
-                            )
-                            fig.update_layout(height=400)
-                            st.plotly_chart(fig, use_container_width=True)
-                        else:
-                            st.info("No spending data available for this month")
+                        # Spending Patterns
+                        monthly_df = df.copy()
+                        monthly_df['month'] = monthly_df['date'].dt.strftime('%Y-%m')
+                        monthly_df['week'] = monthly_df['date'].dt.strftime('%U')
+                        spending_patterns = monthly_df[monthly_df['transaction_type'] == 'expense'].groupby(['month', 'category'])['amount'].sum().abs()
+
+                        fig = px.sunburst(
+                            spending_patterns.reset_index(),
+                            path=['month', 'category'],
+                            values='amount',
+                            title='Monthly Spending Patterns',
+                        )
+                        fig.update_layout(height=400)
+                        st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.info(f"Please add some income transactions for {selected_month} to see financial health analysis.")
+                    st.info("Please add some income transactions to see financial health analysis.")
             else:
                 st.info("No transactions found. Add some transactions to see your financial analysis.")
 
@@ -675,5 +557,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
