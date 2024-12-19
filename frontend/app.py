@@ -264,7 +264,7 @@ def main():
 
     else:
         st.sidebar.title("Menu")
-        menu = st.sidebar.radio(
+        menu = st.sidebar.selectbox(
             "Navigation",
             ["Dashboard", "Analysis", "Add Transaction", "Transaction List"]
         )
