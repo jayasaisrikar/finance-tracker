@@ -5,9 +5,14 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import time
+import os
+from dotenv import load_dotenv
 
-# Backend API URL
-API_URL = "http://localhost:8000"
+# Load environment variables from .env file
+load_dotenv()
+
+# Backend API URL from environment variable
+API_URL = os.getenv("API_URL")
 
 # Session state
 if 'access_token' not in st.session_state:
