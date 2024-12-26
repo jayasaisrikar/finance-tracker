@@ -8,14 +8,14 @@ import time
 # import os
 # from dotenv import load_dotenv
 
-# Backend API URL
+## api endpoint for the backend service
 API_URL = "https://finance-tracker-th8d.onrender.com"
 
-# Session state
+## keep track of user's login status
 if 'access_token' not in st.session_state:
     st.session_state.access_token = None
 
-# Define categories for income and expenses
+## list of possible income sources
 INCOME_CATEGORIES = [
     "Salary",
     "Freelance",
@@ -25,6 +25,7 @@ INCOME_CATEGORIES = [
     "Other Income"
 ]
 
+## common expense categories
 EXPENSE_CATEGORIES = [
     "Food",
     "Transportation",
@@ -39,6 +40,7 @@ EXPENSE_CATEGORIES = [
     "Other Expenses"
 ]
 
+## let's check if user is already logged in
 def init_session():
     if 'access_token' in st.session_state:
         return st.session_state.access_token
@@ -162,9 +164,9 @@ def get_summary():
     return {"total_income": 0, "total_expenses": 0, "net_balance": 0}
 
 def update_transaction_ui(transaction_id, date, amount, transaction_type, category, description):
-    st.subheader("Edit Transaction")
+    st.subheader("Update Transaction")
     
-    # Create form for editing
+    ## create form for editing
     with st.form(key=f"edit_transaction_form_{transaction_id}"):
         col1, col2 = st.columns(2)
         
@@ -266,7 +268,7 @@ def main():
         st.sidebar.title("Menu")
         menu = st.sidebar.selectbox(
             "Navigation",
-            ["Dashboard", "Analysis", "Add Transaction", "Transaction List"]
+            ["Dashboard", "Analysis", "Add Transaction", "Transaction List", "User Manual"]
         )
 
         if menu == "Dashboard":
@@ -274,7 +276,7 @@ def main():
             with col1:
                 st.header("Dashboard")
             
-            # Add month selector
+            ## add month selector
             transactions = get_transactions()
             if transactions:
                 df = pd.DataFrame(transactions)
@@ -298,10 +300,10 @@ def main():
                         key="dashboard_month_selector"
                     )
                 
-                # Filter transactions for selected month
+                ## filter transactions for selected month
                 monthly_df = df[df['month'] == selected_month]
                 
-                # Calculate monthly summary
+                ## calculate monthly summary
                 monthly_income = abs(monthly_df[monthly_df['transaction_type'] == 'income']['amount'].sum())
                 monthly_expenses = abs(monthly_df[monthly_df['transaction_type'] == 'expense']['amount'].sum())
                 monthly_balance = monthly_income - monthly_expenses
@@ -326,14 +328,14 @@ def main():
                                delta=monthly_balance - monthly_expenses)
                     st.markdown('</div>', unsafe_allow_html=True)
 
-                # Add Monthly Overview plot
+                ## Add Monthly Overview plot
                 st.subheader("Monthly Overview")
                 monthly_summary = df.groupby(['month', 'transaction_type'])['amount'].sum().unstack().fillna(0)
 
                 if 'income' not in monthly_summary.columns:
-                    monthly_summary['income'] = 0
+                    monthly_summary['income'] = 0  ## no income yet? start with zero
                 if 'expense' not in monthly_summary.columns:
-                    monthly_summary['expense'] = 0
+                    monthly_summary['expense'] = 0  ## same for expenses
 
                 monthly_summary['net'] = monthly_summary['income'] - abs(monthly_summary['expense'])
 
@@ -371,7 +373,7 @@ def main():
                 if monthly_summary['expense'].sum() == 0:
                     st.info("No expenses recorded yet. Add some expense transactions to see the complete analysis.")
 
-                # Daily Transactions (Full Width)
+                ## Daily Transactions (Full Width)
                 st.subheader("Daily Transactions")
                 daily_summary = monthly_df.groupby(['date', 'transaction_type'])['amount'].sum().reset_index()
                 fig = px.scatter(daily_summary, 
@@ -389,12 +391,12 @@ def main():
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-                # Category Analysis - Side by Side
+                ## Category Analysis - Side by Side
                 st.subheader("Category Analysis")
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    # Expense Analysis
+                    ## Expense Analysis
                     expense_df = monthly_df[monthly_df['transaction_type'] == 'expense']
                     if not expense_df.empty:
                         expense_by_category = expense_df.groupby('category')['amount'].sum().abs()
@@ -410,7 +412,7 @@ def main():
                         st.info("No expenses recorded for this month")
 
                 with col2:
-                    # Income Analysis
+                    ## Income Analysis
                     income_df = monthly_df[monthly_df['transaction_type'] == 'income']
                     if not income_df.empty:
                         income_by_category = income_df.groupby('category')['amount'].sum()
@@ -425,7 +427,7 @@ def main():
                     else:
                         st.info("No income recorded for this month")
 
-                # Recent Transactions for the selected month
+                ## Recent Transactions for the selected month
                 st.subheader(f"Recent Transactions for {selected_month}")
                 recent_transactions = monthly_df.sort_values('date', ascending=False)
                 if not recent_transactions.empty:
@@ -550,14 +552,14 @@ def main():
                 st.dataframe(filtered_df[['date', 'amount', 'category', 'description']])
 
                 if not filtered_df.empty:
-                    st.subheader("Edit Transaction")
+                    st.subheader("Update Transaction")
                     transaction_options = filtered_df.apply(
                         lambda row: f"{row['date'].strftime('%Y-%m-%d')} - {row['description']} ({row['category']}) - ${abs(row['amount'])}", 
                         axis=1
                     ).tolist()
                     
                     selected_transaction_index = st.selectbox(
-                        "Select Transaction to Edit",
+                        "Select Transaction to Update",
                         range(len(transaction_options)),
                         format_func=lambda x: transaction_options[x]
                     )
@@ -590,10 +592,10 @@ def main():
                     index=available_months.index(current_month) if current_month in available_months else 0
                 )
                 
-                # Filter transactions for selected month
+                ## filter transactions for selected month
                 monthly_df = df[df['month'] == selected_month]
                 
-                # Calculate monthly totals
+                ## calculate monthly totals
                 monthly_income = abs(monthly_df[monthly_df['transaction_type'] == 'income']['amount'].sum())
                 monthly_expenses = abs(monthly_df[monthly_df['transaction_type'] == 'expense']['amount'].sum())
                 
@@ -604,7 +606,7 @@ def main():
                     
                     with col1:
                         st.subheader(f"Expense Ratio for {selected_month}")
-                        # Expense Ratio Gauge Chart
+                        ## expense ratio gauge chart
                         fig = go.Figure(go.Indicator(
                             mode="gauge+number+delta",
                             value=expense_ratio,
@@ -657,12 +659,12 @@ def main():
                                 - Create an emergency budget
                             """)
 
-                    # Spending Analysis
+                    ## Spending Analysis
                     st.subheader(f"Spending Analysis for {selected_month}")
                     col1, col2 = st.columns(2)
                     
                     with col1:
-                        # Category-wise Expenses Bar Chart
+                        ## category-wise expenses bar chart
                         expense_df = monthly_df[monthly_df['transaction_type'] == 'expense']
                         if not expense_df.empty:
                             expense_by_category = expense_df.groupby('category')['amount'].sum().abs().sort_values(ascending=True)
@@ -679,7 +681,7 @@ def main():
                             st.info("No expenses recorded for this month")
                     
                     with col2:
-                        # Monthly Spending Pattern
+                        ## monthly spending pattern
                         if not monthly_df[monthly_df['transaction_type'] == 'expense'].empty:
                             daily_spending = monthly_df[monthly_df['transaction_type'] == 'expense'].groupby(['date', 'category'])['amount'].sum().abs()
                             fig = px.sunburst(
@@ -696,6 +698,64 @@ def main():
                     st.info(f"Please add some income transactions for {selected_month} to see financial health analysis.")
             else:
                 st.info("No transactions found. Add some transactions to see your financial analysis.")
+
+        elif menu == "User Manual":
+            st.header("📚 User Manual")
+            
+            st.subheader("🎯 Getting Started")
+            st.markdown("""
+                Welcome to the Personal Finance Tracker! This guide will help you understand how to use all features effectively.
+                
+                ### 1️⃣ Dashboard
+                - View your monthly financial overview
+                - Track income, expenses, and balance
+                - Analyze spending patterns through interactive charts
+                - View recent transactions
+                
+                ### 2️⃣ Adding and Deleting Transactions
+                1. Navigate to "Add Transaction"
+                2. Select transaction type (Income/Expense)
+                3. Enter the following details:
+                   - Date
+                   - Amount
+                   - Category
+                   - Description
+                4. Click "Add Transaction" to save
+                5. Navigate to the end to view and delete transactions
+
+                ### 3️⃣ Transaction Management
+                - View all transactions in "Transaction List"
+                - Filter transactions by:
+                  - Date range
+                  - Category
+                  - Amount range
+                - Update existing transactions
+                
+                ### 4️⃣ Financial Analysis
+                - View expense ratio and financial health indicators
+                - Analyze category-wise spending
+                - Track daily spending patterns
+                - Get personalized financial recommendations
+                
+                ### 💡 Tips for Better Financial Management
+                - Regularly update your transactions
+                - Categorize transactions correctly
+                - Monitor your expense ratio
+                - Review monthly spending patterns
+                - Set budget goals for different categories
+                
+                ### 🔍 Understanding the Charts
+                1. **Monthly Overview**: Shows income vs expenses trend
+                2. **Category Analysis**: Displays spending distribution
+                3. **Daily Transactions**: Tracks day-wise spending
+                4. **Expense Ratio**: Monitors financial health
+                
+                ### ⚠️ Important Notes
+                - Keep your login credentials secure
+                - Regular updates ensure accurate analysis
+                - Use appropriate categories for better tracking
+                - Monitor financial health indicators regularly
+            """)
 
         if st.sidebar.button("Logout"):
             st.session_state.access_token = None
