@@ -371,34 +371,59 @@ def main():
                 if monthly_summary['expense'].sum() == 0:
                     st.info("No expenses recorded yet. Add some expense transactions to see the complete analysis.")
 
+                # Daily Transactions (Full Width)
+                st.subheader("Daily Transactions")
+                daily_summary = monthly_df.groupby(['date', 'transaction_type'])['amount'].sum().reset_index()
+                fig = px.scatter(daily_summary, 
+                                x='date', 
+                                y='amount',
+                                color='transaction_type',
+                                size='amount',
+                                title=f'Daily Transactions for {selected_month}',
+                                labels={'date': 'Date', 'amount': 'Amount ($)', 'transaction_type': 'Type'})
+                fig.update_layout(
+                    height=500,  # Increased height for full-page feel
+                    hovermode='x unified',
+                    yaxis_title='Amount ($)',
+                    xaxis_title='Date'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Category Analysis - Side by Side
+                st.subheader("Category Analysis")
                 col1, col2 = st.columns(2)
-                
+
                 with col1:
-                    st.subheader("Daily Transactions")
-                    daily_summary = monthly_df.groupby(['date', 'transaction_type'])['amount'].sum().reset_index()
-                    fig = px.scatter(daily_summary, 
-                                   x='date', 
-                                   y='amount',
-                                   color='transaction_type',
-                                   size='amount',
-                                   title=f'Daily Transactions for {selected_month}',
-                                   labels={'date': 'Date', 'amount': 'Amount ($)', 'transaction_type': 'Type'})
-                    fig.update_layout(height=400)
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                with col2:
-                    # Category Analysis for the selected month
+                    # Expense Analysis
                     expense_df = monthly_df[monthly_df['transaction_type'] == 'expense']
                     if not expense_df.empty:
                         expense_by_category = expense_df.groupby('category')['amount'].sum().abs()
-                        fig = px.pie(values=expense_by_category.values, 
-                                   names=expense_by_category.index, 
-                                   title=f'Expenses by Category for {selected_month}',
-                                   hole=0.4)
-                        fig.update_layout(height=400)
-                        st.plotly_chart(fig, use_container_width=True)
+                        fig_expense = px.pie(
+                            values=expense_by_category.values, 
+                            names=expense_by_category.index, 
+                            title=f'Expenses by Category for {selected_month}',
+                            hole=0.4
+                        )
+                        fig_expense.update_layout(height=400)
+                        st.plotly_chart(fig_expense, use_container_width=True)
                     else:
                         st.info("No expenses recorded for this month")
+
+                with col2:
+                    # Income Analysis
+                    income_df = monthly_df[monthly_df['transaction_type'] == 'income']
+                    if not income_df.empty:
+                        income_by_category = income_df.groupby('category')['amount'].sum()
+                        fig_income = px.pie(
+                            values=income_by_category.values, 
+                            names=income_by_category.index, 
+                            title=f'Income by Category for {selected_month}',
+                            hole=0.4
+                        )
+                        fig_income.update_layout(height=400)
+                        st.plotly_chart(fig_income, use_container_width=True)
+                    else:
+                        st.info("No income recorded for this month")
 
                 # Recent Transactions for the selected month
                 st.subheader(f"Recent Transactions for {selected_month}")
