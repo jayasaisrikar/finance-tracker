@@ -11,6 +11,8 @@ from app import get_transactions, add_transaction, get_summary
 def setup_test():
     # Initialize session state before each test
     st.session_state.access_token = "test_token"
+    import app
+    app.API_URL = "http://localhost:8000"  # Override API URL for tests
 
 def test_get_transactions_success(requests_mock):
     mock_transactions = [

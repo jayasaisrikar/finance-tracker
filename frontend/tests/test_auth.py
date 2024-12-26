@@ -10,6 +10,11 @@ def setup_test():
     # Reset session state before each test
     st.session_state.access_token = None
 
+@pytest.fixture(autouse=True)
+def mock_api_url():
+    import app
+    app.API_URL = "http://localhost:8000"  # Override API URL for tests
+
 def test_successful_login(requests_mock):
     # Mock the login API endpoint
     requests_mock.post(
@@ -17,7 +22,7 @@ def test_successful_login(requests_mock):
         json={"access_token": "test_token", "token_type": "bearer"}
     )
     
-    result = login("testuser", "password123")
+    result = login("testuser", "TestPass123!")  # Use valid password format
     assert result == True
     assert st.session_state.access_token == "test_token"
 
@@ -36,10 +41,11 @@ def test_successful_signup(requests_mock):
     # Mock successful signup
     requests_mock.post(
         "http://localhost:8000/users/",
-        json={"id": 1, "username": "testuser", "email": "test@example.com"}
+        json={"id": 1, "username": "testuser", "email": "test@example.com"},
+        status_code=200  # Make sure status code is 200
     )
     
-    result = signup("testuser", "test@example.com", "password123")
+    result = signup("testuser", "test@example.com", "TestPass123!")  # Use valid password
     assert result == True
 
 def test_failed_signup_duplicate_user(requests_mock):
