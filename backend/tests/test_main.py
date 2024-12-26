@@ -50,20 +50,26 @@ def test_access_protected_route_with_invalid_token():
     assert response.status_code == 401
 
 # Transaction API Tests
-def test_create_transaction_invalid_data():
-    # First create and login user
-    client.post("/users/", json={
+@pytest.fixture
+def auth_headers():
+    # Create a test user
+    response = client.post("/users/", json={
         "email": "test@example.com",
-        "password": "testpass",
+        "password": "TestPass123!",
         "username": "testuser"
     })
+    assert response.status_code == 200
+
+    # Login to get token
     login_response = client.post(
         "/token",
-        data={"username": "testuser", "password": "testpass"}
+        data={"username": "testuser", "password": "TestPass123!"}
     )
-    access_token = login_response.json()["access_token"]
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
 
-    # Test invalid transaction data
+def test_create_transaction_invalid_data(auth_headers):
     response = client.post(
         "/transactions/",
         json={
@@ -72,46 +78,21 @@ def test_create_transaction_invalid_data():
             "category": "Test",
             "description": "Invalid"
         },
-        headers={"Authorization": f"Bearer {access_token}"}
+        headers=auth_headers
     )
     assert response.status_code == 422
 
-def test_get_summary_empty_transactions():
-    # Create and login user
-    client.post("/users/", json={
-        "email": "test@example.com",
-        "password": "testpass",
-        "username": "testuser"
-    })
-    login_response = client.post(
-        "/token",
-        data={"username": "testuser", "password": "testpass"}
-    )
-    access_token = login_response.json()["access_token"]
-
+def test_get_summary_empty_transactions(auth_headers):
     response = client.get(
         "/transactions/summary",
-        headers={"Authorization": f"Bearer {access_token}"}
+        headers=auth_headers
     )
     data = response.json()
     assert data["total_income"] == 0
     assert data["total_expenses"] == 0
     assert data["net_balance"] == 0
 
-def test_create_transaction_with_zero_amount():
-    # First create and login user
-    client.post("/users/", json={
-        "email": "test@example.com",
-        "password": "testpass",
-        "username": "testuser"
-    })
-    login_response = client.post(
-        "/token",
-        data={"username": "testuser", "password": "testpass"}
-    )
-    access_token = login_response.json()["access_token"]
-
-    # Test transaction with zero amount
+def test_create_transaction_with_zero_amount(auth_headers):
     response = client.post(
         "/transactions/",
         json={
@@ -121,24 +102,12 @@ def test_create_transaction_with_zero_amount():
             "category": "Test",
             "description": "Zero amount test"
         },
-        headers={"Authorization": f"Bearer {access_token}"}
+        headers=auth_headers
     )
     assert response.status_code == 422
     assert "Transaction amount cannot be zero" in response.json()["detail"][0]["msg"]
 
-def test_get_transactions_by_amount_range():
-    # First create and login user
-    client.post("/users/", json={
-        "email": "test@example.com",
-        "password": "testpass",
-        "username": "testuser"
-    })
-    login_response = client.post(
-        "/token",
-        data={"username": "testuser", "password": "testpass"}
-    )
-    access_token = login_response.json()["access_token"]
-
+def test_get_transactions_by_amount_range(auth_headers):
     # Create some test transactions
     transactions = [
         {"date": str(date.today()), "amount": 50.0, "transaction_type": "expense", "category": "Food", "description": "Test"},
@@ -150,16 +119,16 @@ def test_get_transactions_by_amount_range():
         client.post(
             "/transactions/",
             json=transaction,
-            headers={"Authorization": f"Bearer {access_token}"}
+            headers=auth_headers
         )
 
     # Test amount range filter
     response = client.get(
         "/transactions/by-amount/?min_amount=40&max_amount=120",
-        headers={"Authorization": f"Bearer {access_token}"}
+        headers=auth_headers
     )
     
     assert response.status_code == 200
     filtered_transactions = response.json()
-    assert len(filtered_transactions) == 2 
+    assert len(filtered_transactions) == 2
 

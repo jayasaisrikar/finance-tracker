@@ -30,26 +30,55 @@ def db():
     transaction.rollback()
     connection.close()
 
+@pytest.fixture
+def user_create_data():
+    return schemas.UserCreate(
+        email="test@example.com",
+        password="TestPass123!",
+        username="testuser"
+    )
+
+@pytest.fixture
+def test_user(db: Session, user_create_data):
+    return crud.create_user(db, user_create_data)
+
 # User Tests
 def test_create_user_duplicate_email(db: Session):
-    user1 = schemas.UserCreate(email="test@example.com", password="password1", username="user1")
-    user2 = schemas.UserCreate(email="test@example.com", password="password2", username="user2")
+    # Create first user
+    user1 = schemas.UserCreate(
+        email="test@example.com",
+        password="TestPass123!",
+        username="testuser1"
+    )
     crud.create_user(db, user1)
+    
+    # Try to create second user with same email
+    user2 = schemas.UserCreate(
+        email="test@example.com",
+        password="TestPass123!",
+        username="testuser2"
+    )
     with pytest.raises(Exception):
         crud.create_user(db, user2)
 
 def test_create_user_duplicate_username(db: Session):
-    user1 = schemas.UserCreate(email="test1@example.com", password="password1", username="testuser")
-    user2 = schemas.UserCreate(email="test2@example.com", password="password2", username="testuser")
+    user1 = schemas.UserCreate(
+        email="test1@example.com",
+        password="TestPass123!",
+        username="testuser"
+    )
     crud.create_user(db, user1)
+    
+    user2 = schemas.UserCreate(
+        email="test2@example.com",
+        password="TestPass123!",
+        username="testuser"
+    )
     with pytest.raises(Exception):
         crud.create_user(db, user2)
 
 # Transaction Tests
-def test_create_transaction_with_negative_amount(db: Session):
-    user = schemas.UserCreate(email="test@example.com", password="testpass", username="testuser")
-    db_user = crud.create_user(db, user)
-    
+def test_create_transaction_with_negative_amount(db: Session, test_user):
     transaction = schemas.TransactionCreate(
         date=date.today(),
         amount=100.50,
@@ -57,11 +86,15 @@ def test_create_transaction_with_negative_amount(db: Session):
         category="Food",
         description="Groceries"
     )
-    db_transaction = crud.create_user_transaction(db, transaction, db_user.id)
+    db_transaction = crud.create_user_transaction(db, transaction, test_user.id)
     assert db_transaction.amount == -100.50
 
 def test_get_transactions_by_date_range(db: Session):
-    user = schemas.UserCreate(email="test@example.com", password="testpass", username="testuser")
+    user = schemas.UserCreate(
+        email="test@example.com",
+        password="TestPass123!",  # Meets password requirements
+        username="testuser"
+    )
     db_user = crud.create_user(db, user)
     
     # Create transactions with different dates
@@ -83,7 +116,11 @@ def test_get_transactions_by_date_range(db: Session):
     assert len(transactions) == 6
 
 def test_get_transactions_by_category(db: Session):
-    user = schemas.UserCreate(email="test@example.com", password="testpass", username="testuser")
+    user = schemas.UserCreate(
+        email="test@example.com",
+        password="TestPass123!",  # Meets password requirements
+        username="testuser"
+    )
     db_user = crud.create_user(db, user)
     
     categories = ["Food", "Transport", "Food", "Entertainment"]
@@ -116,7 +153,11 @@ def test_update_nonexistent_transaction(db: Session):
     assert result is None
 
 def test_get_transactions_by_amount_range(db: Session):
-    user = schemas.UserCreate(email="test@example.com", password="testpass", username="testuser")
+    user = schemas.UserCreate(
+        email="test@example.com",
+        password="TestPass123!",  # Meets password requirements
+        username="testuser"
+    )
     db_user = crud.create_user(db, user)
     
     amounts = [50.0, 100.0, 150.0, 200.0]
